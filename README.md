@@ -18,12 +18,12 @@ it seemed like overkill at the time.
 
 ## TODOs
 Maybe if I have time at some point:
-[ ] More comprehensive testing for backward passes
-[ ] Cleaner organization
-[ ] Functional-style gradient functions for the various operators
-[ ] Support for Tensors
-[ ] Parallelism
-[ ] Softmax, tanh, etc. 
+- [ ] More comprehensive testing for backward passes
+- [ ] Cleaner organization
+- [ ] Functional-style gradient functions for the various operators
+- [ ] Support for Tensors
+- [ ] Parallelism
+- [ ] Softmax, tanh, etc. 
 
 ## References
 - `Vec`-based [graph representations in Rust](https://paulkernfeld.com/2018/06/17/exploring-computation-graphs-in-rust.html)
