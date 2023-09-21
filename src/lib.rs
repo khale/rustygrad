@@ -62,7 +62,7 @@ pub struct ValueBuilder {
 }
 
 impl ValueBuilder {
-    fn new() -> Self {
+    pub fn new() -> Self {
         ValueBuilder { 
             data: 0.0, 
             grad: 0.0, 
