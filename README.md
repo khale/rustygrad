@@ -1,3 +1,5 @@
+![rustygrad](https://github.com/khale/rustygrad/actions/workflows/ci.yml/badge.svg)
+
 # RustyGrad
 Dead simple autograd library in Rust based on Andrej Karpathy's [micrograd](https://youtu.be/VMj-3S1tku0) engine. 
 Really just a weekend project to learn more Rust and DNN concepts, but I might try to turn it into something more
