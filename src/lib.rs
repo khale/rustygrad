@@ -1,5 +1,6 @@
 use std::ops;
 use std::fmt;
+use std::iter;
 
 // who produced me
 // TODO: change to state pattern: 
@@ -186,6 +187,32 @@ impl Value {
     pub fn zero_gradients(&mut self) {
         _zero_grads(self);
     }
+
+
+    // should give a pre-order traversal
+    pub fn values<'a>(&'a self) -> Box<dyn Iterator<Item = &Value> + 'a> {
+        Box::new(
+            iter::once(self)
+                .chain(self.producers.iter().map(|n| n.values()).flatten()),
+        )
+    }
+
+    pub fn check_gradients(&self, expected: &[f64]) -> bool {
+        for (i, v) in self.values().enumerate() {
+            if v.grad != expected[i] {
+               return false;
+            }
+        }
+        true
+    }
+
+    pub fn print_grads(&self) {
+        for i in self.values() {
+            print!("{:?} ", i.grad);
+        }
+        println!("");
+    }
+
 }
 
 pub trait Pow<Rhs = Self> {
@@ -332,7 +359,6 @@ impl ops::Mul<Value> for f64 {
     }
 }
 
-// val1 / val2
 impl ops::Div<Value> for Value {
     type Output = Self;
     fn div(self, other: Self) -> Self {
@@ -340,7 +366,6 @@ impl ops::Div<Value> for Value {
     }
 }
 
-// val / <float>
 impl ops::Div<f64> for Value {
     type Output = Self;
     fn div(self, other: f64) -> Self {
@@ -352,7 +377,6 @@ impl ops::Div<f64> for Value {
     }
 }
 
-// <float> / val
 impl ops::Div<Value> for f64 {
     type Output = Value;
     fn div(self, other: Value) -> Value {
@@ -372,7 +396,6 @@ impl ops::Neg for Value {
 }
 
 
-// TODO: add gradient tests (how to inspect grads after backward pass?)
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -471,5 +494,80 @@ mod tests {
         let v2 = ValueBuilder::new().data(3.0).finalize();
         assert_eq!(v1.relu(), ValueBuilder::new().data(0.0).finalize());
         assert_eq!(v2.relu(), ValueBuilder::new().data(3.0).finalize());
+    }
+    
+    #[test]
+    fn simple_add_grads_correctly() {
+        let v1 = ValueBuilder::new().data(-2.0).finalize();
+        let v2 = ValueBuilder::new().data(3.0).finalize();
+        let mut v3 = v1 + v2;
+        v3.backward();
+        assert_eq!(true, v3.check_gradients(&[1.0, 1.0, 1.0]));
+    }
+
+    #[test]
+    fn simple_mul_grads_correctly() {
+        let v1 = ValueBuilder::new().data(-2.0).finalize();
+        let v2 = ValueBuilder::new().data(3.0).finalize();
+        let mut v3 = v1 * v2;
+        v3.backward();
+        assert_eq!(true, v3.check_gradients(&[1.0, 3.0, -2.0]));
+    }
+
+    #[test]
+    fn simple_pow_grads_correctly() {
+        let v1 = ValueBuilder::new().data(10.0).finalize();
+        let mut v2 = v1.pow(2.0);
+        v2.backward();
+        assert_eq!(true, v2.check_gradients(&[1.0, 20.0]));
+    }
+
+    #[test]
+    fn simple_relu_grads_correctly_pos() {
+        let v1 = ValueBuilder::new().data(10.0).finalize();
+        let mut v2 = v1.relu();
+        v2.backward();
+        assert_eq!(true, v2.check_gradients(&[1.0, 1.0]));
+    }
+
+    #[test]
+    fn simple_relu_grads_correctly_neg() {
+        let v1 = ValueBuilder::new().data(-10.0).finalize();
+        let mut v2 = v1.relu();
+        v2.backward();
+        assert_eq!(true, v2.check_gradients(&[1.0, 0.0]));
+    }
+
+    #[test]
+    fn linear_2level_expr_grads_correctly() {
+        let v1 = ValueBuilder::new().data(2.0).finalize();
+        let v2 = ValueBuilder::new().data(3.0).finalize();
+        let v3 = v1 + v2;
+        let mut v4 = v3 * 4.0;
+        v4.backward();
+        assert_eq!(true, v4.check_gradients(&[1.0, 4.0, 4.0, 4.0, 5.0]));
+    }
+
+    #[test]
+    fn nonlinear_2level_expr_grads_correctly() {
+        let v1 = ValueBuilder::new().data(-2.0).finalize();
+        let v2 = ValueBuilder::new().data(3.0).finalize();
+        let v3 = v1 + v2;
+        let v4 = v3 * 4.0;
+        let mut v5 = v4.relu();
+        v5.backward();
+        assert_eq!(true, v5.check_gradients(&[1.0, 1.0, 4.0, 4.0, 4.0, 1.0]));
+    }
+
+    #[test]
+    fn nonlinear_2level_expr_grads_correctly_neg() {
+        let v1 = ValueBuilder::new().data(2.0).finalize();
+        let v2 = ValueBuilder::new().data(3.0).finalize();
+        let v3 = v1 + v2;
+        let v4 = v3 * -4.0;
+        let mut v5 = v4.relu();
+        v5.backward();
+        v5.print_grads();
+        assert_eq!(true, v5.check_gradients(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0]));
     }
 }
